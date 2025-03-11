@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 
 /* Source is where apk/ipa is available to Download */
 enum Source {
@@ -19,7 +22,8 @@ enum Source {
   IS_INSTALLED_FROM_OTHER_SOURCE,
   IS_INSTALLED_FROM_APP_STORE,
   IS_INSTALLED_FROM_TEST_FLIGHT,
-  UNKNOWN
+  IS_IN_REVIEW,
+  UNKNOWN,
 }
 
 /* Store Checker is useful to find the origin of installed apk/ipa */
@@ -69,6 +73,11 @@ class StoreChecker {
         return Source.IS_INSTALLED_FROM_OTHER_SOURCE;
       }
     } else if (Platform.isIOS || Platform.isMacOS) {
+      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      String bundleId = packageInfo.packageName;
+      String currentVersion = packageInfo.version;
+      String? appStoreVersion = await _fetchStoreVersion(bundleId);
+
       if (sourceName == null) {
         // Unknown source when null on iOS
         return Source.UNKNOWN;
@@ -78,6 +87,9 @@ class StoreChecker {
       } else if (sourceName.compareTo('AppStore') == 0) {
         // Installed ipa from App Store
         return Source.IS_INSTALLED_FROM_APP_STORE;
+      } else if (appStoreVersion != null &&
+          currentVersion.compareTo(appStoreVersion) > 0) {
+        return Source.IS_IN_REVIEW;
       } else {
         // Installed ipa from Test Flight
         return Source.IS_INSTALLED_FROM_TEST_FLIGHT;
@@ -85,5 +97,36 @@ class StoreChecker {
     }
     // Installed from Unknown source
     return Source.UNKNOWN;
+  }
+
+  static Future<String?> _fetchStoreVersion(String bundleId) async {
+    if (Platform.isIOS || Platform.isMacOS)
+      return _fetchAppStoreVersion(bundleId);
+    else if (Platform.isAndroid)
+      return _fetchPlayStoreVersion(bundleId);
+    else
+      return null;
+  }
+
+  static Future<String?> _fetchAppStoreVersion(String bundleId) async {
+    try {
+      String url = 'http://itunes.apple.com/lookup?bundleId=$bundleId';
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['resultCount'] > 0) {
+          return data['results'][0]['version'];
+        }
+      }
+    } catch (e) {
+      print("Error fetching App Store version: $e");
+    }
+    return null;
+  }
+
+  static Future<String?> _fetchPlayStoreVersion(String bundleId) async {
+    // TODO: Implement Android
+    return null;
   }
 }
