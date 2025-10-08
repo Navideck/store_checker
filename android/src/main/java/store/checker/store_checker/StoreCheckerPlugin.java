@@ -21,18 +21,29 @@ public class StoreCheckerPlugin implements FlutterPlugin, MethodCallHandler {
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
     this.applicationContext = flutterPluginBinding.getApplicationContext();
-    channel = new MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "store_checker");
+    channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "store_checker");
     channel.setMethodCallHandler(this);
   }
 
-  //This function is used to get the installer package name of current application
-  @TargetApi(Build.VERSION_CODES.ECLAIR)
+  // This function is used to get the installer package name of current application
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    // Check call methos
     if (call.method.equals("getSource")) {
-      // get the installer package name
-      result.success(applicationContext.getPackageManager().getInstallerPackageName(applicationContext.getPackageName()));
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          android.content.pm.InstallSourceInfo installSourceInfo =
+              applicationContext.getPackageManager().getInstallSourceInfo(applicationContext.getPackageName());
+          String installer = installSourceInfo.getInstallingPackageName();
+          if (installer == null) {
+            installer = installSourceInfo.getInitiatingPackageName();
+          }
+          result.success(installer);
+        } else {
+          result.success(applicationContext.getPackageManager().getInstallerPackageName(applicationContext.getPackageName()));
+        }
+      } catch (Exception e) {
+        result.success(null);
+      }
     } else {
       result.notImplemented();
     }
@@ -41,6 +52,10 @@ public class StoreCheckerPlugin implements FlutterPlugin, MethodCallHandler {
   // onDetachedFromEngine will be used to disconnect the binding between channels
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-    channel.setMethodCallHandler(null);
+    if (channel != null) {
+      channel.setMethodCallHandler(null);
+      channel = null;
+    }
+    applicationContext = null;
   }
 }
