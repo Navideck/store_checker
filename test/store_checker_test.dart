@@ -51,18 +51,18 @@ void main() {
     expect(await StoreChecker.getSource, expected);
   });
 
-  test('getSource returns IS_IN_REVIEW when installed version is newer', () async {
+  test('getSource returns IS_PENDING_RELEASE when installed version is newer', () async {
     sourceName = 'TestFlight';
     currentVersion = '2.0.0';
     appStoreVersion = '1.9.9';
-    expect(await StoreChecker.getSource, Source.IS_IN_REVIEW);
+    expect(await StoreChecker.getSource, Source.IS_PENDING_RELEASE);
   }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
 
   test('getSource compares versions segment by segment', () async {
     sourceName = 'TestFlight';
     currentVersion = '1.10.0';
     appStoreVersion = '1.2.0';
-    expect(await StoreChecker.getSource, Source.IS_IN_REVIEW);
+    expect(await StoreChecker.getSource, Source.IS_PENDING_RELEASE);
   }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
 
   test('getSource returns TEST_FLIGHT when version is not newer', () async {
@@ -73,12 +73,12 @@ void main() {
   }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
 
   test(
-      'getSource returns IS_IN_REVIEW on first submission with no published version',
+      'getSource returns IS_PENDING_RELEASE on first submission with no published version',
       () async {
     sourceName = 'TestFlight';
     currentVersion = '1.0.0';
     appStoreVersion = null;
-    expect(await StoreChecker.getSource, Source.IS_IN_REVIEW);
+    expect(await StoreChecker.getSource, Source.IS_PENDING_RELEASE);
   }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
 
   test('getSource returns TEST_FLIGHT when the store lookup fails', () async {

@@ -71,9 +71,9 @@ switch (installationSource) {
           // Installed from app store
           source = "App Store";
           break;
-        case Source.IS_IN_REVIEW:
-          // Installed from a store reviewer
-          source = "In Review";
+        case Source.IS_PENDING_RELEASE:
+          // Installed version is not available on the store yet
+          source = "Pending Release";
           break;
         case Source.IS_INSTALLED_FROM_TEST_FLIGHT:
           // Installed from Test Flight
@@ -86,7 +86,7 @@ switch (installationSource) {
       }
 ```
 
-`IS_IN_REVIEW` currently only work on iOS and macOS. For macOS you need to add the `com.apple.security.network.client` capability in order to check if the app is in review.
+`IS_PENDING_RELEASE` currently only works on iOS and macOS. It is reported when the installed version is newer than the version published on the App Store (or nothing is published yet), which covers states like Waiting for Review, In Review, and Pending Developer Release. For macOS you need to add the `com.apple.security.network.client` capability in order to check if the app is pending release.
 
 ## Issues and feedback
 

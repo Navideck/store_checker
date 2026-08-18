@@ -20,7 +20,7 @@ enum Source {
   IS_INSTALLED_FROM_OTHER_SOURCE,
   IS_INSTALLED_FROM_APP_STORE,
   IS_INSTALLED_FROM_TEST_FLIGHT,
-  IS_IN_REVIEW,
+  IS_PENDING_RELEASE,
   UNKNOWN,
 }
 
@@ -92,7 +92,7 @@ class StoreChecker {
           _isNewerVersion(currentVersion, appStoreVersion)) {
         // First submission with no published version yet, or installed
         // version is newer than the published one
-        return Source.IS_IN_REVIEW;
+        return Source.IS_PENDING_RELEASE;
       } else {
         // Installed ipa from Test Flight
         return Source.IS_INSTALLED_FROM_TEST_FLIGHT;
