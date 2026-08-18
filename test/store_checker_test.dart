@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:store_checker/store_checker.dart';
 
+Uri? lastRequestUri;
+
 void main() {
   const MethodChannel channel = MethodChannel('store_checker');
 
@@ -18,6 +20,7 @@ void main() {
   HttpOverrides? previousHttpOverrides;
 
   setUp(() {
+    lastRequestUri = null;
     previousHttpOverrides = HttpOverrides.current;
     HttpOverrides.global = _FakeHttpOverrides(() => appStoreVersion);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -84,6 +87,27 @@ void main() {
     appStoreVersion = 'failure';
     expect(await StoreChecker.getSource, Source.IS_INSTALLED_FROM_TEST_FLIGHT);
   }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
+
+  test('store lookup includes the device region as country parameter', () async {
+    sourceName = 'TestFlight';
+    currentVersion = '1.0.0';
+    appStoreVersion = '1.0.0';
+    await StoreChecker.getSource;
+
+    expect(lastRequestUri, isNotNull);
+    final locale = Platform.localeName;
+    final separator = locale.lastIndexOf('_') > locale.lastIndexOf('-')
+        ? locale.lastIndexOf('_')
+        : locale.lastIndexOf('-');
+    if (separator == -1 || separator == locale.length - 1) {
+      // Locale has no region; the parameter must be omitted
+      expect(lastRequestUri!.queryParameters.containsKey('country'), isFalse);
+    } else {
+      final code = locale.substring(separator + 1).toUpperCase();
+      expect(code.length, 2);
+      expect(lastRequestUri!.queryParameters['country'], code);
+    }
+  }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
 }
 
 class _FakeHttpOverrides extends HttpOverrides {
@@ -102,8 +126,10 @@ class _FakeHttpClient implements HttpClient {
   _FakeHttpClient(this.appStoreVersion);
 
   @override
-  Future<HttpClientRequest> getUrl(Uri url) async =>
-      _FakeHttpRequest(appStoreVersion);
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    lastRequestUri = url;
+    return _FakeHttpRequest(appStoreVersion);
+  }
 
   @override
   void close({bool force = false}) {}

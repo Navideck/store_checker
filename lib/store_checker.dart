@@ -137,7 +137,11 @@ class StoreChecker {
 
   static Future<String?> _fetchAppStoreVersion(String bundleId) async {
     try {
+      final country = _countryCode();
       String url = 'https://itunes.apple.com/lookup?bundleId=$bundleId';
+      if (country.isNotEmpty) {
+        url = '$url&country=$country';
+      }
       final client = HttpClient();
       try {
         final request = await client.getUrl(Uri.parse(url));
@@ -145,13 +149,13 @@ class StoreChecker {
         if (response.statusCode == 200) {
           final body = await response.transform(utf8.decoder).join();
           final data = jsonDecode(body);
-if (data['resultCount'] > 0) {
-          return data['results'][0]['version'];
-        } else {
-          // The bundle id is not published on the App Store yet,
-          // which happens on the first submission of the app
-          return '';
-        }
+          if (data['resultCount'] > 0) {
+            return data['results'][0]['version'];
+          } else {
+            // The bundle id is not published on the App Store yet,
+            // which happens on the first submission of the app
+            return '';
+          }
         }
       } finally {
         client.close(force: true);
@@ -160,6 +164,18 @@ if (data['resultCount'] > 0) {
       print("Error fetching App Store version: $e");
     }
     return null;
+  }
+
+  // Returns the region of the device locale (e.g. "US" from "en_US" or
+// "en-US") or an empty string when the locale has no region.
+  static String _countryCode() {
+    final locale = Platform.localeName;
+    final separator = locale.lastIndexOf('_') > locale.lastIndexOf('-')
+        ? locale.lastIndexOf('_')
+        : locale.lastIndexOf('-');
+    if (separator == -1 || separator == locale.length - 1) return '';
+    final code = locale.substring(separator + 1).toUpperCase();
+    return code.length == 2 ? code : '';
   }
 
   static Future<String?> _fetchPlayStoreVersion(String bundleId) async {
