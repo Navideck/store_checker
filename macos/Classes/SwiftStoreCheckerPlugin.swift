@@ -12,6 +12,11 @@ public class SwiftStoreCheckerPlugin: NSObject, FlutterPlugin {
     
     // Find the origin of installed app 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if call.method == "getPackageInfo" {
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+            result(["bundleId": Bundle.main.bundleIdentifier ?? "", "version": version])
+            return
+        }
         if Bundle.main.isTestFlight{
             result("TestFlight")
         } else if Bundle.main.isAppStore {

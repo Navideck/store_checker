@@ -44,6 +44,19 @@ public class StoreCheckerPlugin implements FlutterPlugin, MethodCallHandler {
       } catch (Exception e) {
         result.success(null);
       }
+    } else if (call.method.equals("getPackageInfo")) {
+      try {
+        String bundleId = applicationContext.getPackageName();
+        String version = applicationContext.getPackageManager()
+            .getPackageInfo(bundleId, 0)
+            .versionName;
+        java.util.Map<String, String> info = new java.util.HashMap<>();
+        info.put("bundleId", bundleId);
+        info.put("version", version);
+        result.success(info);
+      } catch (Exception e) {
+        result.success(null);
+      }
     } else {
       result.notImplemented();
     }

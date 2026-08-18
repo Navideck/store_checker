@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
 
 /* Source is where apk/ipa is available to Download */
 enum Source {
@@ -73,9 +72,9 @@ class StoreChecker {
         return Source.IS_INSTALLED_FROM_OTHER_SOURCE;
       }
     } else if (Platform.isIOS || Platform.isMacOS) {
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      String bundleId = packageInfo.packageName;
-      String currentVersion = packageInfo.version;
+      final packageInfo = await _getPackageInfo();
+      String bundleId = packageInfo['bundleId'] ?? '';
+      String currentVersion = packageInfo['version'] ?? '';
       String? appStoreVersion = await _fetchStoreVersion(bundleId);
 
       if (sourceName == null) {
@@ -106,6 +105,15 @@ class StoreChecker {
       return _fetchPlayStoreVersion(bundleId);
     else
       return null;
+  }
+
+  static Future<Map<String, String>> _getPackageInfo() async {
+    final Map<Object?, Object?>? info =
+        await _channel.invokeMapMethod('getPackageInfo');
+    return {
+      'bundleId': info?['bundleId'] as String? ?? '',
+      'version': info?['version'] as String? ?? '',
+    };
   }
 
   static Future<String?> _fetchAppStoreVersion(String bundleId) async {

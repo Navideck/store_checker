@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:store_checker/store_checker.dart';
 
 void main() {
@@ -11,15 +10,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    PackageInfo.setMockInitialValues(
-      appName: 'store_checker_example',
-      packageName: 'store.checker.store_checker_example',
-      version: '1.0.0',
-      buildNumber: '1',
-      buildSignature: '',
-    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      if (methodCall.method == 'getPackageInfo') {
+        return {
+          'bundleId': 'store.checker.store_checker_example',
+          'version': '1.0.0',
+        };
+      }
       return (Platform.isIOS || Platform.isMacOS) ? 'AppStore' : 'com.android.vending';
     });
   });
