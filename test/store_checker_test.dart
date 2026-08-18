@@ -13,13 +13,13 @@ void main() {
 
   String sourceName = 'TestFlight';
   String currentVersion = '1.0.0';
-  String appStoreVersion = '1.0.0';
+  String? appStoreVersion = '1.0.0';
 
   HttpOverrides? previousHttpOverrides;
 
   setUp(() {
     previousHttpOverrides = HttpOverrides.current;
-    HttpOverrides.global = _FakeHttpOverrides(appStoreVersion);
+    HttpOverrides.global = _FakeHttpOverrides(() => appStoreVersion);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
       if (methodCall.method == 'getPackageInfo') {
@@ -68,10 +68,26 @@ void main() {
     appStoreVersion = '1.0.0';
     expect(await StoreChecker.getSource, Source.IS_INSTALLED_FROM_TEST_FLIGHT);
   }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
+
+  test(
+      'getSource returns IS_IN_REVIEW on first submission with no published version',
+      () async {
+    sourceName = 'TestFlight';
+    currentVersion = '1.0.0';
+    appStoreVersion = null;
+    expect(await StoreChecker.getSource, Source.IS_IN_REVIEW);
+  }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
+
+  test('getSource returns TEST_FLIGHT when the store lookup fails', () async {
+    sourceName = 'TestFlight';
+    currentVersion = '2.0.0';
+    appStoreVersion = 'failure';
+    expect(await StoreChecker.getSource, Source.IS_INSTALLED_FROM_TEST_FLIGHT);
+  }, skip: !Platform.isIOS && !Platform.isMacOS ? 'iOS/macOS only' : false);
 }
 
 class _FakeHttpOverrides extends HttpOverrides {
-  final String appStoreVersion;
+  final String? Function() appStoreVersion;
 
   _FakeHttpOverrides(this.appStoreVersion);
 
@@ -81,7 +97,7 @@ class _FakeHttpOverrides extends HttpOverrides {
 }
 
 class _FakeHttpClient implements HttpClient {
-  final String appStoreVersion;
+  final String? Function() appStoreVersion;
 
   _FakeHttpClient(this.appStoreVersion);
 
@@ -98,7 +114,7 @@ class _FakeHttpClient implements HttpClient {
 }
 
 class _FakeHttpRequest implements HttpClientRequest {
-  final String appStoreVersion;
+  final String? Function() appStoreVersion;
 
   _FakeHttpRequest(this.appStoreVersion);
 
@@ -112,21 +128,27 @@ class _FakeHttpRequest implements HttpClientRequest {
 }
 
 class _FakeHttpResponse implements HttpClientResponse {
-  final String appStoreVersion;
+  final String? Function() appStoreVersion;
 
   _FakeHttpResponse(this.appStoreVersion);
 
   @override
-  int get statusCode => 200;
+  int get statusCode => appStoreVersion() == 'failure' ? 500 : 200;
 
   @override
   Stream<S> transform<S>(StreamTransformer<List<int>, S> streamTransformer) {
-    final body = jsonEncode({
-      'resultCount': 1,
-      'results': [
-        {'version': appStoreVersion}
-      ]
-    });
+    final version = appStoreVersion();
+    final body = version == null
+        ? jsonEncode({
+            'resultCount': 0,
+            'results': <Object?>[],
+          })
+        : jsonEncode({
+            'resultCount': 1,
+            'results': [
+              {'version': version}
+            ]
+          });
     return streamTransformer.bind(Stream.value(utf8.encode(body)));
   }
 

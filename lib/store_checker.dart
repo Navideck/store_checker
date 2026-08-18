@@ -85,8 +85,13 @@ class StoreChecker {
       } else if (sourceName.compareTo('AppStore') == 0) {
         // Installed ipa from App Store
         return Source.IS_INSTALLED_FROM_APP_STORE;
-      } else if (appStoreVersion != null &&
+      } else if (appStoreVersion == null) {
+        // Could not determine the live store version (e.g. network failure)
+        return Source.IS_INSTALLED_FROM_TEST_FLIGHT;
+      } else if (appStoreVersion.isEmpty ||
           _isNewerVersion(currentVersion, appStoreVersion)) {
+        // First submission with no published version yet, or installed
+        // version is newer than the published one
         return Source.IS_IN_REVIEW;
       } else {
         // Installed ipa from Test Flight
@@ -140,9 +145,13 @@ class StoreChecker {
         if (response.statusCode == 200) {
           final body = await response.transform(utf8.decoder).join();
           final data = jsonDecode(body);
-          if (data['resultCount'] > 0) {
-            return data['results'][0]['version'];
-          }
+if (data['resultCount'] > 0) {
+          return data['results'][0]['version'];
+        } else {
+          // The bundle id is not published on the App Store yet,
+          // which happens on the first submission of the app
+          return '';
+        }
         }
       } finally {
         client.close(force: true);
