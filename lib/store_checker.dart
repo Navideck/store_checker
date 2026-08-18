@@ -86,7 +86,7 @@ class StoreChecker {
         // Installed ipa from App Store
         return Source.IS_INSTALLED_FROM_APP_STORE;
       } else if (appStoreVersion != null &&
-          currentVersion.compareTo(appStoreVersion) > 0) {
+          _isNewerVersion(currentVersion, appStoreVersion)) {
         return Source.IS_IN_REVIEW;
       } else {
         // Installed ipa from Test Flight
@@ -106,6 +106,21 @@ class StoreChecker {
       return null;
   }
 
+  // Compares dot-separated numeric version strings segment by segment,
+  // so e.g. "1.10.0" is correctly treated as newer than "1.2.0".
+  static bool _isNewerVersion(String current, String appStore) {
+    final currentParts = current.split('.').map(int.tryParse).toList();
+    final appStoreParts = appStore.split('.').map(int.tryParse).toList();
+    final length =
+        currentParts.length > appStoreParts.length ? currentParts.length : appStoreParts.length;
+    for (var i = 0; i < length; i++) {
+      final currentPart = i < currentParts.length ? currentParts[i] ?? 0 : 0;
+      final appStorePart = i < appStoreParts.length ? appStoreParts[i] ?? 0 : 0;
+      if (currentPart != appStorePart) return currentPart > appStorePart;
+    }
+    return false;
+  }
+
   static Future<Map<String, String>> _getPackageInfo() async {
     final Map<Object?, Object?>? info =
         await _channel.invokeMapMethod('getPackageInfo');
@@ -117,7 +132,7 @@ class StoreChecker {
 
   static Future<String?> _fetchAppStoreVersion(String bundleId) async {
     try {
-      String url = 'http://itunes.apple.com/lookup?bundleId=$bundleId';
+      String url = 'https://itunes.apple.com/lookup?bundleId=$bundleId';
       final client = HttpClient();
       try {
         final request = await client.getUrl(Uri.parse(url));
