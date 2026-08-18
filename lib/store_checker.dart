@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
 /* Source is where apk/ipa is available to Download */
 enum Source {
@@ -119,13 +118,19 @@ class StoreChecker {
   static Future<String?> _fetchAppStoreVersion(String bundleId) async {
     try {
       String url = 'http://itunes.apple.com/lookup?bundleId=$bundleId';
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['resultCount'] > 0) {
-          return data['results'][0]['version'];
+      final client = HttpClient();
+      try {
+        final request = await client.getUrl(Uri.parse(url));
+        final response = await request.close();
+        if (response.statusCode == 200) {
+          final body = await response.transform(utf8.decoder).join();
+          final data = jsonDecode(body);
+          if (data['resultCount'] > 0) {
+            return data['results'][0]['version'];
+          }
         }
+      } finally {
+        client.close(force: true);
       }
     } catch (e) {
       print("Error fetching App Store version: $e");
