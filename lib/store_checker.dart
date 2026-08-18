@@ -20,7 +20,7 @@ enum Source {
   IS_INSTALLED_FROM_OTHER_SOURCE,
   IS_INSTALLED_FROM_APP_STORE,
   IS_INSTALLED_FROM_TEST_FLIGHT,
-  IS_PENDING_RELEASE,
+  IS_PENDING_APP_STORE_REVIEW,
   UNKNOWN,
 }
 
@@ -92,7 +92,7 @@ class StoreChecker {
           _isNewerVersion(currentVersion, appStoreVersion)) {
         // First submission with no published version yet, or installed
         // version is newer than the published one
-        return Source.IS_PENDING_RELEASE;
+        return Source.IS_PENDING_APP_STORE_REVIEW;
       } else {
         // Installed ipa from Test Flight
         return Source.IS_INSTALLED_FROM_TEST_FLIGHT;
@@ -116,8 +116,9 @@ class StoreChecker {
   static bool _isNewerVersion(String current, String appStore) {
     final currentParts = current.split('.').map(int.tryParse).toList();
     final appStoreParts = appStore.split('.').map(int.tryParse).toList();
-    final length =
-        currentParts.length > appStoreParts.length ? currentParts.length : appStoreParts.length;
+    final length = currentParts.length > appStoreParts.length
+        ? currentParts.length
+        : appStoreParts.length;
     for (var i = 0; i < length; i++) {
       final currentPart = i < currentParts.length ? currentParts[i] ?? 0 : 0;
       final appStorePart = i < appStoreParts.length ? appStoreParts[i] ?? 0 : 0;

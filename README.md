@@ -71,7 +71,7 @@ switch (installationSource) {
           // Installed from app store
           source = "App Store";
           break;
-        case Source.IS_PENDING_RELEASE:
+        case Source.IS_PENDING_APP_STORE_REVIEW:
           // Installed version is not available on the store yet
           source = "Pending Release";
           break;
@@ -86,7 +86,7 @@ switch (installationSource) {
       }
 ```
 
-`IS_PENDING_RELEASE` currently only works on iOS and macOS. It is reported when the installed version is newer than the version published on the App Store (or nothing is published yet), which covers states like Waiting for Review, In Review, and Pending Developer Release. On iOS the App Store lookup uses HTTPS, so no App Transport Security exception is needed. For macOS you need to add the `com.apple.security.network.client` capability to your app's entitlements in order to allow the lookup (the example project already includes it).
+`IS_PENDING_APP_STORE_REVIEW` currently only works on iOS and macOS. It is reported when the installed version is newer than the version published on the App Store (or nothing is published yet), which covers states like Waiting for Review, In Review, and Pending Developer Release. On iOS the App Store lookup uses HTTPS, so no App Transport Security exception is needed. For macOS you need to add the `com.apple.security.network.client` capability to your app's entitlements in order to allow the lookup (the example project already includes it).
 
 ## Issues and feedback
 

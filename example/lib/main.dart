@@ -93,7 +93,7 @@ class _MyAppState extends State<MyApp> {
           // Installed from iOS app store
           source = "App Store";
           break;
-        case Source.IS_PENDING_RELEASE:
+        case Source.IS_PENDING_APP_STORE_REVIEW:
           // Installed version is not available on the store yet
           source = "Pending Release";
           break;
