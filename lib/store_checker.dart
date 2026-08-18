@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -19,7 +20,8 @@ enum Source {
   IS_INSTALLED_FROM_OTHER_SOURCE,
   IS_INSTALLED_FROM_APP_STORE,
   IS_INSTALLED_FROM_TEST_FLIGHT,
-  UNKNOWN
+  IS_PENDING_APP_STORE_REVIEW,
+  UNKNOWN,
 }
 
 /* Store Checker is useful to find the origin of installed apk/ipa */
@@ -69,6 +71,11 @@ class StoreChecker {
         return Source.IS_INSTALLED_FROM_OTHER_SOURCE;
       }
     } else if (Platform.isIOS || Platform.isMacOS) {
+      final packageInfo = await _getPackageInfo();
+      String bundleId = packageInfo['bundleId'] ?? '';
+      String currentVersion = packageInfo['version'] ?? '';
+      String? appStoreVersion = await _fetchStoreVersion(bundleId);
+
       if (sourceName == null) {
         // Unknown source when null on iOS
         return Source.UNKNOWN;
@@ -78,6 +85,14 @@ class StoreChecker {
       } else if (sourceName.compareTo('AppStore') == 0) {
         // Installed ipa from App Store
         return Source.IS_INSTALLED_FROM_APP_STORE;
+      } else if (appStoreVersion == null) {
+        // Could not determine the live store version (e.g. network failure)
+        return Source.IS_INSTALLED_FROM_TEST_FLIGHT;
+      } else if (appStoreVersion.isEmpty ||
+          _isNewerVersion(currentVersion, appStoreVersion)) {
+        // First submission with no published version yet, or installed
+        // version is newer than the published one
+        return Source.IS_PENDING_APP_STORE_REVIEW;
       } else {
         // Installed ipa from Test Flight
         return Source.IS_INSTALLED_FROM_TEST_FLIGHT;
@@ -85,5 +100,87 @@ class StoreChecker {
     }
     // Installed from Unknown source
     return Source.UNKNOWN;
+  }
+
+  static Future<String?> _fetchStoreVersion(String bundleId) async {
+    if (Platform.isIOS || Platform.isMacOS)
+      return _fetchAppStoreVersion(bundleId);
+    else if (Platform.isAndroid)
+      return _fetchPlayStoreVersion(bundleId);
+    else
+      return null;
+  }
+
+  // Compares dot-separated numeric version strings segment by segment,
+  // so e.g. "1.10.0" is correctly treated as newer than "1.2.0".
+  static bool _isNewerVersion(String current, String appStore) {
+    final currentParts = current.split('.').map(int.tryParse).toList();
+    final appStoreParts = appStore.split('.').map(int.tryParse).toList();
+    final length = currentParts.length > appStoreParts.length
+        ? currentParts.length
+        : appStoreParts.length;
+    for (var i = 0; i < length; i++) {
+      final currentPart = i < currentParts.length ? currentParts[i] ?? 0 : 0;
+      final appStorePart = i < appStoreParts.length ? appStoreParts[i] ?? 0 : 0;
+      if (currentPart != appStorePart) return currentPart > appStorePart;
+    }
+    return false;
+  }
+
+  static Future<Map<String, String>> _getPackageInfo() async {
+    final Map<Object?, Object?>? info =
+        await _channel.invokeMapMethod('getPackageInfo');
+    return {
+      'bundleId': info?['bundleId'] as String? ?? '',
+      'version': info?['version'] as String? ?? '',
+    };
+  }
+
+  static Future<String?> _fetchAppStoreVersion(String bundleId) async {
+    try {
+      final country = _countryCode();
+      String url = 'https://itunes.apple.com/lookup?bundleId=$bundleId';
+      if (country.isNotEmpty) {
+        url = '$url&country=$country';
+      }
+      final client = HttpClient();
+      try {
+        final request = await client.getUrl(Uri.parse(url));
+        final response = await request.close();
+        if (response.statusCode == 200) {
+          final body = await response.transform(utf8.decoder).join();
+          final data = jsonDecode(body);
+          if (data['resultCount'] > 0) {
+            return data['results'][0]['version'];
+          } else {
+            // The bundle id is not published on the App Store yet,
+            // which happens on the first submission of the app
+            return '';
+          }
+        }
+      } finally {
+        client.close(force: true);
+      }
+    } catch (e) {
+      print("Error fetching App Store version: $e");
+    }
+    return null;
+  }
+
+  // Returns the region of the device locale (e.g. "US" from "en_US" or
+// "en-US") or an empty string when the locale has no region.
+  static String _countryCode() {
+    final locale = Platform.localeName;
+    final separator = locale.lastIndexOf('_') > locale.lastIndexOf('-')
+        ? locale.lastIndexOf('_')
+        : locale.lastIndexOf('-');
+    if (separator == -1 || separator == locale.length - 1) return '';
+    final code = locale.substring(separator + 1).toUpperCase();
+    return code.length == 2 ? code : '';
+  }
+
+  static Future<String?> _fetchPlayStoreVersion(String bundleId) async {
+    // TODO: Implement Android
+    return null;
   }
 }

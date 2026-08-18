@@ -1,3 +1,7 @@
+## Next
+* Added `IS_PENDING_APP_STORE_REVIEW` detection for iOS/macOS: reported when the installed version is newer than the published App Store version (or nothing is published yet)
+* Removed the `package_info_plus` and `http` dependencies
+
 ## 1.8.0
 Android gradle fixes
 ## 1.7.0

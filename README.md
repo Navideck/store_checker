@@ -4,10 +4,10 @@ This Flutter plugin is useful to find the origin of currently installed apk/ipa.
 
 **Android**: It's very common to have Android applications republished on alternate markets or their APKs made available for download. The plugin detects whether app is installed from local source or Play Store or other stores
 
-**iOS**: Detects whether app is installed from TestFlight Beta or App Store build
+**iOS**: Detects whether app is installed from TestFlight Beta or App Store build, and whether the installed version is not yet published on the App Store (pending release).
 
 # Usage
-You can use the StoreChecker to find the origin of apk/ipa. This works both on iOS and Android.
+You can use the StoreChecker to find the origin of apk/ipa. This works both on iOS, macOS and Android.
 Add this to your package's pubspec.yaml file:
 dependencies:
   store_checker: ^1.8.0
@@ -71,6 +71,10 @@ switch (installationSource) {
           // Installed from app store
           source = "App Store";
           break;
+        case Source.IS_PENDING_APP_STORE_REVIEW:
+          // Installed version is not available on the store yet
+          source = "Pending Release";
+          break;
         case Source.IS_INSTALLED_FROM_TEST_FLIGHT:
           // Installed from Test Flight
           source = "Test Flight";
@@ -81,6 +85,8 @@ switch (installationSource) {
           break;
       }
 ```
+
+`IS_PENDING_APP_STORE_REVIEW` currently only works on iOS and macOS. It is reported when the installed version is newer than the version published on the App Store (or nothing is published yet), which covers states like Waiting for Review, In Review, and Pending Developer Release. On iOS the App Store lookup uses HTTPS, so no App Transport Security exception is needed. For macOS you need to add the `com.apple.security.network.client` capability to your app's entitlements in order to allow the lookup (the example project already includes it).
 
 ## Issues and feedback
 

@@ -4,19 +4,17 @@ version '1.0'
 buildscript {
     repositories {
         google()
-        //jcenter()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath 'com.android.tools.build:gradle:8.11.1'
     }
 }
 
 rootProject.allprojects {
     repositories {
         google()
-        //jcenter()
         mavenCentral()
     }
 }
@@ -24,11 +22,13 @@ rootProject.allprojects {
 apply plugin: 'com.android.library'
 
 android {
-    if (project.android.hasProperty("namespace")) {
-        namespace 'store.checker.store_checker'
-    }
+    namespace 'store.checker.store_checker'
+    compileSdkVersion 36
 
-    compileSdkVersion 34
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 
     defaultConfig {
         minSdkVersion 21
